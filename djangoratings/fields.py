@@ -1,14 +1,18 @@
+#coding: utf-8
+from __future__ import absolute_import
+
+from django.core.exceptions import PermissionDenied
 from django.db.models import IntegerField, PositiveIntegerField
 from django.db import IntegrityError
 from django.conf import settings
 
-import forms
 import itertools
 from datetime import datetime
 
-from models import Vote, Score
-from default_settings import RATINGS_VOTES_PER_IP
-from exceptions import *
+from . import forms
+from .models import Vote, Score
+from .exceptions import *
+from .default_settings import RATINGS_VOTES_PER_IP
 
 if 'django.contrib.contenttypes' not in settings.INSTALLED_APPS:
     raise ImportError("djangoratings requires django.contrib.contenttypes in your INSTALLED_APPS")
@@ -126,7 +130,7 @@ class RatingManager(object):
         return
     
     def get_iterable_range(self):
-        return range(1, self.field.range) #started from 1, because 0 is equal to delete
+        return list(range(1, self.field.range)) #started from 1, because 0 is equal to delete
         
     def add(self, score, user, ip_address, cookies={}, commit=True):
         """add(score, user, ip_address)
@@ -135,7 +139,7 @@ class RatingManager(object):
         try:
             score = int(score)
         except (ValueError, TypeError):
-            raise InvalidRating("%s is not a valid choice for %s" % (score, self.field.name))
+            raise ValueError("%s is not a valid choice for %s" % (score, self.field.name))
         
         delete = (score == 0)
         if delete and not self.field.allow_delete:
@@ -143,11 +147,11 @@ class RatingManager(object):
             # ... you're also can't delete your vote if you haven't permissions to change it. I leave this case for CannotChangeVote
         
         if score < 0 or score > self.field.range:
-            raise InvalidRating("%s is not a valid choice for %s" % (score, self.field.name))
+            raise ValueError("%s is not a valid choice for %s" % (score, self.field.name))
 
         is_anonymous = (user is None or not user.is_authenticated())
         if is_anonymous and not self.field.allow_anonymous:
-            raise AuthRequired("user must be a user, not '%r'" % (user,))
+            raise PermissionDenied('Please sing in for rating')
         
         if is_anonymous:
             user = None
@@ -359,7 +363,7 @@ class RatingField(IntegerField):
             editable=False, default=0, blank=True)
         cls.add_to_class("%s_score" % (self.name,), self.score_field)
 
-        self.key = md5_hexdigest(self.name)
+        self.key = md5_hexdigest(self.name.encode("utf-8"))
 
         field = RatingCreator(self)
 

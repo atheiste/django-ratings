@@ -1,10 +1,10 @@
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.http import HttpResponse, Http404
-
-from exceptions import *
 from django.conf import settings
-from default_settings import RATINGS_VOTES_PER_IP
+
+from .exceptions import *
+from .default_settings import RATINGS_VOTES_PER_IP
 
 class AddRatingView(object):
     def __call__(self, request, content_type_id, object_id, field_name, score):
@@ -38,9 +38,9 @@ class AddRatingView(object):
             adds = field.add(score, request.user, request.META.get('REMOTE_ADDR'), request.COOKIES)
         except IPLimitReached:
             return self.too_many_votes_from_ip_response(request, context)
-        except AuthRequired:
+        except PermissionDenied:
             return self.authentication_required_response(request, context)
-        except InvalidRating:
+        except ValueError:
             return self.invalid_rating_response(request, context)
         except CannotChangeVote:
             return self.cannot_change_vote_response(request, context)

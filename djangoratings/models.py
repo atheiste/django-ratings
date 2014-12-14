@@ -4,14 +4,16 @@ from django.conf import settings
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
+from django.utils.encoding import python_2_unicode_compatible
 
 try:
     from django.utils.timezone import now
 except ImportError:
     now = datetime.now
 
-from managers import VoteManager, SimilarUserManager
+from .managers import VoteManager, SimilarUserManager
 
+@python_2_unicode_compatible
 class Vote(models.Model):
     content_type    = models.ForeignKey(ContentType, related_name="votes")
     object_id       = models.PositiveIntegerField()
@@ -30,7 +32,7 @@ class Vote(models.Model):
     class Meta:
         unique_together = (('content_type', 'object_id', 'key', 'user', 'ip_address'))
 
-    def __unicode__(self):
+    def __str__(self):
         return u"%s voted %s on %s" % (self.user_display, self.score, self.content_object)
 
     def save(self, *args, **kwargs):
@@ -49,6 +51,8 @@ class Vote(models.Model):
         return '.'.join(ip)
     partial_ip_address = property(partial_ip_address)
 
+
+@python_2_unicode_compatible
 class Score(models.Model):
     content_type    = models.ForeignKey(ContentType)
     object_id       = models.PositiveIntegerField()
@@ -61,9 +65,11 @@ class Score(models.Model):
     class Meta:
         unique_together = (('content_type', 'object_id', 'key'),)
 
-    def __unicode__(self):
+    def __str__(self):
         return u"%s scored %s with %s votes" % (self.content_object, self.score, self.votes)
 
+
+@python_2_unicode_compatible
 class SimilarUser(models.Model):
     from_user       = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="similar_users")
     to_user         = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="similar_users_from")
@@ -76,8 +82,9 @@ class SimilarUser(models.Model):
     class Meta:
         unique_together = (('from_user', 'to_user'),)
 
-    def __unicode__(self):
-        print u"%s %s similar to %s" % (self.from_user, self.exclude and 'is not' or 'is', self.to_user)
+    def __str__(self):
+        return u"%s %s similar to %s" % (self.from_user, self.exclude and 'is not' or 'is', self.to_user)
+
 
 class IgnoredObject(models.Model):
     user            = models.ForeignKey(settings.AUTH_USER_MODEL)
